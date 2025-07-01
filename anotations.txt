@@ -1,0 +1,119 @@
+Agora trabalho com MODULOS
+
+Autocontido
+    Modulo de USUARIOS possui tudo de usuarios
+    Diminui imports entre modulos
+
+CONTROLLER = listagem de rotas
+    main.ts CHAMA app.modules que possui o controller
+Controller possui rotas mapeadas 
+    Ex:
+        users.controller  ----> possui rotas @get, @post, @delete...
+
+nest g resource - CRIA UM NOVO MODULO COMPLETO
+
+npm install prisma --save-dev  ---> instala 
+npx prisma init ----> exec
+
+npm install @prisma/client --->instala o client que sera injetado
+npx prisma generate ----> gera o generate/prisma
+
+
+Histórico de Bugs e Soluções do Projeto
+
+Bug 2: Decorator @IsEnum Quebra ao Iniciar a Aplicação
+Sintoma: A aplicação quebrava ao iniciar (npm run start:dev) com o erro TypeError: Cannot convert undefined or null to object vindo da biblioteca class-validator.
+
+Causa Raiz: Devido ao uso de um caminho de saída customizado para o Prisma (output = "../generated/prisma"), precisámos de um atalho (paths) no tsconfig.json. O TypeScript (em tempo de compilação) entendia este atalho, mas o Node.js (em tempo de execução) não. Como resultado, o enum (UserRole) era importado como undefined, e o decorator @IsEnum(undefined) quebrava.
+
+Solução: Instalar a biblioteca tsconfig-paths (npm install tsconfig-paths) e importá-la na primeira linha do arquivo src/main.ts com import 'tsconfig-paths/register';. Isto "ensina" o Node.js a ler e a respeitar os atalhos definidos no tsconfig.json durante a execução da aplicação.
+
+Bug 3: Erro de Injeção de Dependência (UnknownDependenciesException)
+Sintoma: A aplicação quebrava ao iniciar com o erro Nest can't resolve dependencies of the UsersService (...) PrismaService (...).
+
+Causa Raiz: O UsersService precisava do PrismaService, mas o módulo onde ele vivia (UsersModule) não tinha acesso a este serviço. O PrismaService existia, mas não estava a ser corretamente "fornecido" e "exportado" por um módulo (PrismaModule) que o UsersModule pudesse importar.
+
+Solução:
+
+Criar um src/prisma/prisma.module.ts.
+
+Dentro deste novo módulo, declarar o PrismaService nos arrays providers (para o criar) e exports (para o tornar disponível para outros módulos).
+
+Tornar o PrismaModule global com o decorator @Global() para que o PrismaService ficasse disponível em toda a aplicação.
+
+Importar o PrismaModule no módulo raiz AppModule.
+
+Bug 4: Erros de Caminho ao Executar a Versão de Produção (npm run start:prod)
+Esta foi uma série de erros relacionados com a forma como a aplicação é "empacotada" para produção na pasta dist.
+
+Sintoma 4a: Error: Cannot find module './app.controller'.
+
+Sintoma 4b: Error: Cannot find module 'E:\...\dist\main'.
+
+Causa Raiz (para ambos): Uma discrepância entre a estrutura de pastas criada pelo processo de build (que estava a criar dist/src/main.js) e o que o script start:prod esperava (node dist/main).
+
+Solução: Corrigir o script start:prod no package.json para apontar para o caminho correto do arquivo principal: node dist/src/main.
+
+Sintoma 4c (O Final): Error: Cannot find module '../generated/prisma'.
+
+Causa Raiz: O processo de build do NestJS, por padrão, só copia os arquivos de dentro da pasta src para a pasta dist. A nossa pasta generated, que continha o cliente Prisma, estava na raiz do projeto e, portanto, era deixada para trás, não existindo na dist.
+
+Solução Final: Editar o arquivo nest-cli.json e adicionar a pasta generated à lista de "assets". Isto instrui o processo de build a tratar essa pasta como um "recurso" e a copiá-la para dentro da pasta dist, garantindo que ela esteja disponível para a aplicação em produção. A sua solução final de corrigir o caminho da importação no prisma.service.ts para um caminho relativo correto também funcionou porque, com a pasta generated finalmente copiada para dist, o caminho relativo passou a ser encontrável.
+
+
+
+
+{
+    "email": "Gunther@empresa.com",
+    "password": "2301",
+    "name": "Gunther",
+    "role": "USER"
+}
+
+
+{
+    "email":"superuser@domain.com",  
+    "password": "super-secret-password"
+}
+
+{
+    "email": "adminNOVO@empresa.com",
+    "password": "admin",
+    "name": "ADMIN",
+    "role": "ADMIN"
+}
+
+
+//MODELO PARA TESTAR PERMISSIONS
+
+{
+    "userId": "07f69926-a75c-4bd9-8147-115d4efab7b0",
+    "moduleName": "FINANCEIRO"
+}
+
+
+ADMIN: 
+{ 
+    "email": "admin.teste@empresa.com", 
+    "password": "123", 
+    "name": "ADMIN",
+    "role": "ADMIN" 
+}
+
+O USER_FINANCE: 
+
+{ 
+    "email": "ana.financas@empresa.com", 
+    "password": "123", 
+    "name": "ana",
+    "role": "USER"
+}
+
+O USER_NO_PERMS: 
+
+{ 
+    "email": "carlos.vendas@empresa.com", 
+    "password": "123", 
+    "name": "Carlos",
+    "role": "USER" 
+}
